@@ -1,0 +1,51 @@
+{
+  "name": "three-vpl",
+  "version": "0.1.0",
+  "description": "Diffuse global illumination for Three.js using virtual point lights",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js"
+    }
+  },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "oxlint src test"
+  },
+  "peerDependencies": {
+    "three": "~0.186.0"
+  },
+  "devDependencies": {
+    "@types/three": "~0.186.0",
+    "three": "0.186.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bhouston/three-vpl.git",
+    "directory": "packages/three-vpl"
+  },
+  "homepage": "https://bhouston.github.io/three-vpl/",
+  "license": "MIT",
+  "keywords": [
+    "three",
+    "threejs",
+    "webgpu",
+    "global-illumination",
+    "virtual-point-lights"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}
