@@ -9,6 +9,7 @@
     "dev": "pnpm --filter website dev",
     "tsc": "pnpm -r --if-present typecheck",
     "test": "vitest run && node --test scripts/*.test.mjs",
+    "test:gpu": "node scripts/verify-demo.mjs",
     "lint": "oxlint .",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",

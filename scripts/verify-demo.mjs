@@ -42,7 +42,14 @@ try {
   console.log('Physical adapter:', hardware);
   await page.screenshot({ path: resolve(artifacts, 'website-home.png'), fullPage: true });
   await page.getByRole('link', { name: 'Explore the live demo' }).click();
-  await page.locator('.demo-status').filter({ hasText: 'Drag to orbit' }).waitFor({ timeout: 120000 });
+  await page.waitForFunction(
+    () => {
+      const status = document.querySelector('.demo-status')?.textContent || '';
+      return status.startsWith('Drag to orbit') || status.startsWith('Rendering unavailable:');
+    },
+    { timeout: 120000 },
+  );
+  assert.match(await page.locator('.demo-status').textContent(), /^Drag to orbit/, 'WebGPU demo initialized');
   const completed = async () => {
     await page.evaluate(async () => {
       await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));

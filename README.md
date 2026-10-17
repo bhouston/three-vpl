@@ -30,6 +30,8 @@ pnpm dev
 
 The website is a static GitHub Pages artifact requiring no server or cloud credentials. API documentation is generated from the documented public API during the website build.
 
+To verify rendering locally, serve the built site with `pnpm --filter website serve --host 127.0.0.1 --port 4100`, then run `pnpm test:gpu` in a second terminal. The script requires installed Chrome and a confirmed physical WebGPU adapter, checks lighting modes and quality controls, drains GPU work before screenshots, and writes results to `test-results/` (or `SWARM_ARTIFACTS`). Hosted CI checks the static build without a software GPU fallback.
+
 ## Technique
 
 Alexander Keller's [Instant Radiosity (SIGGRAPH 1997)](https://doi.org/10.1145/258734.258769) approximates indirect illumination with virtual point lights along sampled light paths. Surface emitters capture color bleeding without a regular probe grid; cached visibility lets camera movement reuse the bake. Cost scales with active VPLs per fragment. Low budgets can be noisy and distance clamping sacrifices near-field energy to control singularities.

@@ -1,6 +1,7 @@
 import type { Config } from '@docusaurus/types';
 const config: Config = {
   title: 'three-vpl',
+  favicon: 'img/favicon.svg',
   tagline: 'Let light bounce.',
   url: 'https://bhouston.github.io',
   baseUrl: '/three-vpl/',
