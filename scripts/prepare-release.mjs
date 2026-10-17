@@ -12,7 +12,9 @@ export function prepare({ artifacts } = {}, { cwd, env }) {
   const destination = join(cwd, 'release-artifacts');
   mkdirSync(destination, { recursive: true });
   // pnpm pack ignores a positional package directory; set its working directory.
-  execFileSync(process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm',
+  execFileSync(
+    process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm',
     ['--dir', packageDir, 'pack', '--pack-destination', destination],
-    { cwd, env, stdio: 'inherit', shell: process.platform === 'win32' });
+    { cwd, env, stdio: 'inherit', shell: process.platform === 'win32' },
+  );
 }

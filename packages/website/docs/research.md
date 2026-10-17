@@ -2,6 +2,7 @@
 sidebar_position: 3
 title: Research background
 ---
+
 # From instant radiosity to virtual point lights
 
 Alexander Keller introduced **Instant Radiosity** at SIGGRAPH 1997. The method traces light paths and replaces sampled surface interactions with virtual light sources. Rendering the contributions of these sources approximates indirect illumination using many simpler lighting evaluations.

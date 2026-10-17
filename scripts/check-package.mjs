@@ -20,7 +20,12 @@ for (const entry of [manifest.main, manifest.types, 'LICENSE', 'README.md']) {
 }
 assert.ok(!files.some(({ path }) => /^(test|node_modules|website)\//.test(path)), 'Tarball includes development files');
 const api = await import('../packages/three-vpl/src/index.js');
-for (const name of ['VirtualPointLightGenerator', 'VirtualPointLightsNode', 'VirtualPointLightShadowMaps', 'VirtualPointLightHelper']) {
+for (const name of [
+  'VirtualPointLightGenerator',
+  'VirtualPointLightsNode',
+  'VirtualPointLightShadowMaps',
+  'VirtualPointLightHelper',
+]) {
   assert.equal(typeof api[name], 'function', `Missing public export: ${name}`);
 }
 console.log(`Verified ${manifest.name}: ${files.length} published files, runtime exports and declarations present.`);

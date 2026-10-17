@@ -68,4 +68,3 @@ jobs:
       - name: Summary
         if: inputs.dry_run
         run: echo "Dry run complete; nothing was published and no tag was created." >> "$GITHUB_STEP_SUMMARY"
-

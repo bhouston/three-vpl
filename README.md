@@ -10,11 +10,11 @@ This is an independent project, not an official Three.js package. The initial np
 
 ## Workspace
 
-| Directory | Purpose |
-| --- | --- |
-| `packages/three-vpl` | Publishable ESM package, JSDoc, TypeScript declarations and CPU tests |
-| `packages/website` | Docusaurus documentation, generated API reference and interactive demo |
-| `.github/workflows` | CI, Pages artifact deployment and manually dispatched semantic releases |
+| Directory            | Purpose                                                                 |
+| -------------------- | ----------------------------------------------------------------------- |
+| `packages/three-vpl` | Publishable ESM package, JSDoc, TypeScript declarations and CPU tests   |
+| `packages/website`   | Docusaurus documentation, generated API reference and interactive demo  |
+| `.github/workflows`  | CI, Pages artifact deployment and manually dispatched semantic releases |
 
 Use Node 26 and pnpm 11.27.0 (pinned in `.nvmrc` and `package.json`):
 

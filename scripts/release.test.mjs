@@ -22,5 +22,7 @@ test('release versions before packing and publishes only the library', () => {
   assert.deepEqual(config.branches, ['main']);
   const publishing = config.plugins.filter((plugin) => Array.isArray(plugin) && plugin[0].includes('release-pnpm'));
   assert.deepEqual(publishing, [['@anolilab/semantic-release-pnpm', { pkgRoot: 'packages/three-vpl' }]]);
-  assert.ok(config.plugins.findIndex((p) => Array.isArray(p) && p[1]?.artifacts) > config.plugins.indexOf(publishing[0]));
+  assert.ok(
+    config.plugins.findIndex((p) => Array.isArray(p) && p[1]?.artifacts) > config.plugins.indexOf(publishing[0]),
+  );
 });

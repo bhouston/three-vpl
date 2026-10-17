@@ -53,10 +53,8 @@ The Release workflow refuses any ref other than `main`, re-runs CI on the dispat
 
 - npm packages, through npm trusted publishing (GitHub OIDC, no `NPM_TOKEN`);
 
-
 When there are no release-worthy commits, the run is a no-op. Never bump versions, edit changelogs, or push release tags by hand.
 
 ## Security
 
 Report vulnerabilities privately through GitHub's private vulnerability reporting (see `SECURITY.md` where present), never in a public issue.
-

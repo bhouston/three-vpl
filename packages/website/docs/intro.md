@@ -2,6 +2,7 @@
 sidebar_position: 1
 title: Overview
 ---
+
 # Indirect light, made tangible
 
 **three-vpl** brings virtual point light global illumination to Three.js WebGPU. It samples diffuse light transport on the CPU, places virtual emitters at surface interactions, and evaluates their contribution through Three.js Shader Language (TSL).

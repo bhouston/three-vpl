@@ -1,6 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import { BackSide, Box3, BoxGeometry, DirectionalLight, Mesh, MeshStandardMaterial, PointLight, Scene, Vector3 } from 'three';
-import { VirtualPointLightGenerator, VirtualPointLightHelper, VirtualPointLightsNode, VirtualPointLightShadowMaps } from '../src/index.js';
+import {
+  BackSide,
+  Box3,
+  BoxGeometry,
+  DirectionalLight,
+  Mesh,
+  MeshStandardMaterial,
+  PointLight,
+  Scene,
+  Vector3,
+} from 'three';
+import {
+  VirtualPointLightGenerator,
+  VirtualPointLightHelper,
+  VirtualPointLightsNode,
+  VirtualPointLightShadowMaps,
+} from '../src/index.js';
 
 describe('public API', () => {
   it('validates sampling budgets and physically supported sources', () => {
@@ -26,11 +41,11 @@ describe('public API', () => {
     const options = { count: 32, seed: 3, bounds: new Box3(new Vector3(-5, -5, -5), new Vector3(5, 5, 5)) };
     generator.generate(scene, [light], options);
     expect(generator.count).toBe(32);
-    const first = generator.positions.map(position => position.toArray());
+    const first = generator.positions.map((position) => position.toArray());
     const total = generator.flux.reduce((sum, flux) => sum.add(flux), new Vector3());
     expect(total.x).toBeCloseTo(200, 10);
     generator.generate(scene, [light], options);
-    expect(generator.positions.map(position => position.toArray())).toEqual(first);
+    expect(generator.positions.map((position) => position.toArray())).toEqual(first);
   });
 
   it('synchronizes helper and lighting counts after regeneration without a GPU', () => {

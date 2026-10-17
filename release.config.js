@@ -8,11 +8,14 @@ export default {
     './scripts/prepare-release.mjs',
     ['@anolilab/semantic-release-pnpm', { pkgRoot: 'packages/three-vpl' }],
     ['./scripts/prepare-release.mjs', { artifacts: true }],
-    ['@semantic-release/github', {
-      successComment: false,
-      failComment: false,
-      releasedLabels: false,
-      assets: ['release-artifacts/*.tgz', 'CHANGELOG.md'],
-    }],
+    [
+      '@semantic-release/github',
+      {
+        successComment: false,
+        failComment: false,
+        releasedLabels: false,
+        assets: ['release-artifacts/*.tgz', 'CHANGELOG.md'],
+      },
+    ],
   ],
 };

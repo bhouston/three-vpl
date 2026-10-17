@@ -34,6 +34,9 @@ jobs:
       - run: pnpm test
       - run: pnpm package:check
       - run: pnpm audit --prod --audit-level high
+      - name: Audit build and development tooling (advisory)
+        continue-on-error: true
+        run: pnpm audit --audit-level high
       - uses: actions/upload-artifact@v4
         with:
           name: website

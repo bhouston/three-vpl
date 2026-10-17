@@ -20,8 +20,7 @@ import { VirtualPointLightGenerator, VirtualPointLightsNode, VirtualPointLightSh
 const generator = new VirtualPointLightGenerator(128);
 generator.generate(scene, [sourceLight], { count: 128, bounces: 2, seed: 1 });
 const shadows = new VirtualPointLightShadowMaps(128, 32, 40);
-const indirect = new VirtualPointLightsNode(generator,
-  (start, end, index) => shadows.visibility(start, end, index));
+const indirect = new VirtualPointLightsNode(generator, (start, end, index) => shadows.visibility(start, end, index));
 indirect.minDistance.value = 1;
 // Assign to every receiver's MeshStandardNodeMaterial:
 material.lightsNode = lights([sourceLight, indirect]);

@@ -1,10 +1,8 @@
 {
   "name": "three-vpl-monorepo",
   "private": true,
-  "type": "module",
   "license": "MIT",
-  "packageManager": "pnpm@11.27.0",
-  "engines": { "node": ">=22" },
+  "type": "module",
   "scripts": {
     "build": "pnpm --filter three-vpl build && pnpm docs:build",
     "docs:build": "pnpm --filter website build",
@@ -39,7 +37,14 @@
     "vitest": "^4.1.11"
   },
   "lint-staged": {
-    "*.{js,jsx,ts,tsx,mjs,cjs}": ["oxfmt", "oxlint --fix"],
+    "*.{js,jsx,ts,tsx,mjs,cjs}": [
+      "oxfmt",
+      "oxlint --fix"
+    ],
     "*.{json,jsonc,md,mdx,css,html,yml,yaml}": "oxfmt"
-  }
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@11.27.0"
 }

@@ -10,94 +10,78 @@ import { Fn, If, Loop, dot, float, max, normalWorld, positionWorld, uniform, uni
  * @augments IrradianceNode
  */
 class VirtualPointLightsNode extends IrradianceNode {
+  static get type() {
+    return 'VirtualPointLightsNode';
+  }
 
-	static get type() {
+  /**
+   * @param {VirtualPointLightGenerator} generator - The CPU sample data.
+   * @param {?Function} [visibility=null] - Segment visibility callback accepting two vec3 nodes and the VPL index.
+   */
+  constructor(generator, visibility = null) {
+    super(null);
 
-		return 'VirtualPointLightsNode';
+    this.generator = generator;
+    /** @type {UniformNode<float>} Indirect-light multiplier; zero disables evaluation. */
+    this.intensity = uniform(1);
+    /** @type {UniformNode<bool>} Whether to evaluate the visibility callback. */
+    this.shadows = uniform(true);
+    /** @type {UniformNode<float>} Minimum attenuation distance in world units. */
+    this.minDistance = uniform(1);
+    /** @type {UniformNode<float>} Surface-normal offset for both segment endpoints. */
+    this.bias = uniform(0.01);
+    this.count = uniform(generator.count, 'int');
+    const positions = uniformArray(generator.positions, 'vec3');
+    const normals = uniformArray(generator.normals, 'vec3');
+    const flux = uniformArray(generator.flux, 'vec3');
 
-	}
+    this.node = Fn(() => {
+      const x = positionWorld;
+      const n = normalWorld.normalize();
+      const sum = vec3(0).toVar();
 
-	/**
-	 * @param {VirtualPointLightGenerator} generator - The CPU sample data.
-	 * @param {?Function} [visibility=null] - Segment visibility callback accepting two vec3 nodes and the VPL index.
-	 */
-	constructor( generator, visibility = null ) {
+      If(this.intensity.greaterThan(0), () => {
+        Loop(this.count, ({ i }) => {
+          const y = positions.element(i);
+          const ny = normals.element(i);
+          const v = y.sub(x);
+          const distanceSquared = max(dot(v, v), 1e-8);
+          const w = v.div(distanceSquared.sqrt());
+          const cosine = max(dot(n, w), 0).mul(max(dot(ny, w.negate()), 0));
 
-		super( null );
+          If(cosine.greaterThan(0), () => {
+            const visible = getVisibility(
+              visibility,
+              this.shadows,
+              x.add(n.mul(this.bias)),
+              y.add(ny.mul(this.bias)),
+              i,
+            );
+            const attenuation = cosine.div(max(distanceSquared, this.minDistance.mul(this.minDistance)));
+            sum.addAssign(flux.element(i).mul(attenuation.mul(visible).div(Math.PI)));
+          });
+        });
+      });
 
-		this.generator = generator;
-		/** @type {UniformNode<float>} Indirect-light multiplier; zero disables evaluation. */
-		this.intensity = uniform( 1 );
-		/** @type {UniformNode<bool>} Whether to evaluate the visibility callback. */
-		this.shadows = uniform( true );
-		/** @type {UniformNode<float>} Minimum attenuation distance in world units. */
-		this.minDistance = uniform( 1 );
-		/** @type {UniformNode<float>} Surface-normal offset for both segment endpoints. */
-		this.bias = uniform( 0.01 );
-		this.count = uniform( generator.count, 'int' );
-		const positions = uniformArray( generator.positions, 'vec3' );
-		const normals = uniformArray( generator.normals, 'vec3' );
-		const flux = uniformArray( generator.flux, 'vec3' );
+      return sum.mul(this.intensity);
+    })();
+  }
 
-		this.node = Fn( () => {
-
-			const x = positionWorld;
-			const n = normalWorld.normalize();
-			const sum = vec3( 0 ).toVar();
-
-			If( this.intensity.greaterThan( 0 ), () => {
-
-				Loop( this.count, ( { i } ) => {
-
-					const y = positions.element( i );
-					const ny = normals.element( i );
-					const v = y.sub( x );
-					const distanceSquared = max( dot( v, v ), 1e-8 );
-					const w = v.div( distanceSquared.sqrt() );
-					const cosine = max( dot( n, w ), 0 ).mul( max( dot( ny, w.negate() ), 0 ) );
-
-					If( cosine.greaterThan( 0 ), () => {
-
-						const visible = getVisibility( visibility, this.shadows, x.add( n.mul( this.bias ) ), y.add( ny.mul( this.bias ) ), i );
-						const attenuation = cosine.div( max( distanceSquared, this.minDistance.mul( this.minDistance ) ) );
-						sum.addAssign( flux.element( i ).mul( attenuation.mul( visible ).div( Math.PI ) ) );
-
-					} );
-
-				} );
-
-			} );
-
-			return sum.mul( this.intensity );
-
-		} )();
-
-	}
-
-	/** Updates the active count after regenerating samples. */
-	update() {
-
-		this.count.value = this.generator.count;
-
-	}
-
+  /** Updates the active count after regenerating samples. */
+  update() {
+    this.count.value = this.generator.count;
+  }
 }
 
-function getVisibility( visibility, shadows, start, end, index ) {
+function getVisibility(visibility, shadows, start, end, index) {
+  const value = float(1).toVar();
+  if (visibility !== null) {
+    If(shadows, () => {
+      value.assign(visibility(start, end, index));
+    });
+  }
 
-	const value = float( 1 ).toVar();
-	if ( visibility !== null ) {
-
-		If( shadows, () => {
-
-			value.assign( visibility( start, end, index ) );
-
-		} );
-
-	}
-
-	return value;
-
+  return value;
 }
 
 export { VirtualPointLightsNode };

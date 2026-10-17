@@ -1,7 +1,12 @@
 import type { Light } from 'three';
 import { Scene, PointLight, MeshStandardNodeMaterial, WebGPURenderer } from 'three/webgpu';
 import { lights } from 'three/tsl';
-import { VirtualPointLightGenerator, VirtualPointLightHelper, VirtualPointLightsNode, VirtualPointLightShadowMaps } from '../src/index.js';
+import {
+  VirtualPointLightGenerator,
+  VirtualPointLightHelper,
+  VirtualPointLightsNode,
+  VirtualPointLightShadowMaps,
+} from '../src/index.js';
 const scene = new Scene();
 const light = new PointLight();
 const generator = new VirtualPointLightGenerator(64).generate(scene, [light], { count: 64, bounces: 2 });
@@ -16,4 +21,3 @@ helper.update();
 shadowMaps.update(new WebGPURenderer(), scene, generator, node.bias.value);
 helper.dispose();
 shadowMaps.dispose();
-

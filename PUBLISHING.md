@@ -16,15 +16,16 @@ The public repository, CI and Pages website work before the npm package exists. 
 2. Using your existing npm account, publish the inspected tarball with `npm publish <tarball-path> --access public`. This is the one-time bootstrap exception to automated versioning. The source package starts at `0.1.0`; do not publish the same version twice.
 3. In npm **Settings → Trusted publishing**, add **GitHub Actions**:
 
-   | Field | Value |
-   | --- | --- |
-   | Organization or user | `bhouston` |
-   | Repository | `three-vpl` |
-   | Workflow filename | `release.yml` |
-   | Environment | `npm` |
-   | Allowed action | Publish |
+   | Field                | Value         |
+   | -------------------- | ------------- |
+   | Organization or user | `bhouston`    |
+   | Repository           | `three-vpl`   |
+   | Workflow filename    | `release.yml` |
+   | Environment          | `npm`         |
+   | Allowed action       | Publish       |
 
    See [npm's instructions](https://docs.npmjs.com/trusted-publishers/). The workflow uses the matching `npm` GitHub environment and `id-token: write`. GitHub-hosted runners supply OIDC identity and npm provenance automatically.
+
 4. Associate the initial published version with its exact source commit: create the `v0.1.0` tag and GitHub Release for the merged commit you published. This is the one-time exception to the normal rule against manual release tags. Do this before later release-worthy commits, so semantic-release continues from the published version rather than proposing its default first release, `1.0.0`.
 5. Run `gh workflow run release.yml --ref main -f dry_run=true`. With no new release-worthy commits this is a successful no-op. Preview again after the next feature or fix merges to inspect the next planned version.
 

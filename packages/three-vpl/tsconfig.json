@@ -7,8 +7,5 @@
     "noEmit": true,
     "skipLibCheck": true
   },
-  "include": [
-    "src/**/*.d.ts",
-    "test/**/*.ts"
-  ]
+  "include": ["src/**/*.d.ts", "test/**/*.ts"]
 }

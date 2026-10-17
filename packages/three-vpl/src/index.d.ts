@@ -88,7 +88,13 @@ export class VirtualPointLightShadowMaps {
   /** Generate the visibility expression for an emitter. */
   visibility(start: Node, end: Node, index: Node, receiverNormal?: Node): Node;
   /** Capture all active emitters; call after regeneration or changes to static occluders or bias. */
-  update(renderer: WebGPURenderer, scene: Scene, generator: VirtualPointLightGenerator, bias: number, resolution?: number): void;
+  update(
+    renderer: WebGPURenderer,
+    scene: Scene,
+    generator: VirtualPointLightGenerator,
+    bias: number,
+    resolution?: number,
+  ): void;
   /** Release GPU resources. */
   dispose(): void;
 }
