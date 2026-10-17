@@ -23,7 +23,7 @@ import {
   VirtualPointLightShadowMaps,
 } from 'three-vpl';
 
-// Populate scene with meshes and a PointLight, SpotLight, or DirectionalLight.
+// Populate scene with meshes and a PointLight or DirectionalLight.
 scene.updateMatrixWorld(true);
 const sources = [light];
 const generator = new VirtualPointLightGenerator(128);
@@ -55,4 +55,5 @@ Use a WebGPU-capable browser and a hardware GPU. This website's demo rejects sof
 
 Regenerate samples after relevant scene changes, call `indirect.update()`, and rebuild the visibility maps. Preserve the original source intensities while generating samples if your UI hides direct light.
 
-Stop the animation loop when leaving a scene. Dispose the shadow maps, generator, renderer, geometries, and materials when they are no longer used. See the generated [API reference](./api) for the exported classes and their options.
+Stop the animation loop when leaving a scene. Dispose the shadow maps, renderer, geometries, and materials when they are no longer used. See the generated [API reference](./api) for the exported classes and their options.
+
