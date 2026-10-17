@@ -47,6 +47,7 @@ try {
       const status = document.querySelector('.demo-status')?.textContent || '';
       return status.startsWith('Drag to orbit') || status.startsWith('Rendering unavailable:');
     },
+    null,
     { timeout: 120000 },
   );
   assert.match(await page.locator('.demo-status').textContent(), /^Drag to orbit/, 'WebGPU demo initialized');
