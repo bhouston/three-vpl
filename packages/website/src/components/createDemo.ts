@@ -46,7 +46,7 @@ export async function createDemo(host: HTMLDivElement, status: (message: string)
  const dispose = () => {
   if (disposed) return; disposed = true;
   renderer.setAnimationLoop(null); observer.disconnect(); controls.dispose();
-  shadows.dispose(); generator.dispose();
+  shadows.dispose();
   for (const object of meshes) object.geometry.dispose();
   for (const material of [wall, red, green, white]) material.dispose();
   light.shadow.dispose(); renderer.dispose(); renderer.domElement.remove();
@@ -77,3 +77,4 @@ export async function createDemo(host: HTMLDivElement, status: (message: string)
   return {update,dispose};
  } catch (error) {dispose(); throw error;}
 }
+
