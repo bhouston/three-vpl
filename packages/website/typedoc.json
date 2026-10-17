@@ -1,0 +1,2 @@
+{"entryPoints":["../three-vpl/src/index.d.ts"],"entryPointStrategy":"resolve","allowJs":true,"checkJs":false,"skipErrorChecking":true,"plugin":["typedoc-plugin-markdown"],"out":"docs/api","readme":"none","entryFileName":"index.md","hidePageHeader":true,"hideBreadcrumbs":true,"parametersFormat":"table","excludePrivate":true,"excludeInternal":true}
+
