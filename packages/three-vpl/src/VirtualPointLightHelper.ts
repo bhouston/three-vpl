@@ -1,12 +1,14 @@
+import type { VirtualPointLightGenerator } from './VirtualPointLightGenerator.js';
 import { BufferAttribute, Color, InstancedMesh, Matrix4, MeshBasicMaterial, SphereGeometry } from 'three';
 
 /** Visualizes the positions and reflected light colors sampled by a VirtualPointLightGenerator. */
-class VirtualPointLightHelper extends InstancedMesh {
+class VirtualPointLightHelper extends InstancedMesh<SphereGeometry, MeshBasicMaterial> {
+  readonly generator: VirtualPointLightGenerator;
   /**
    * @param {VirtualPointLightGenerator} generator - The sample data.
    * @param {number} [size=0.12] - Sphere radius in world units.
    */
-  constructor(generator, size = 0.12) {
+  constructor(generator: VirtualPointLightGenerator, size = 0.12) {
     const geometry = new SphereGeometry(size, 16, 16);
     const normals = geometry.getAttribute('normal');
     const colors = new Float32Array(normals.count * 3);

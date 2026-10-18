@@ -6,12 +6,18 @@ import {
   VirtualPointLightHelper,
   VirtualPointLightsNode,
   VirtualPointLightShadowMaps,
-} from '../src/index.js';
+} from 'three-vpl';
+import type { VirtualPointLightOptions, VirtualPointLightVisibility } from 'three-vpl';
+const options: VirtualPointLightOptions = { count: 64, bounces: 2 };
+// @ts-expect-error bounce count must be numeric
+const invalidOptions: VirtualPointLightOptions = { bounces: 'two' };
+void invalidOptions;
 const scene = new Scene();
 const light = new PointLight();
-const generator = new VirtualPointLightGenerator(64).generate(scene, [light], { count: 64, bounces: 2 });
+const generator = new VirtualPointLightGenerator(64).generate(scene, [light], options);
 const shadowMaps = new VirtualPointLightShadowMaps(64);
-const node = new VirtualPointLightsNode(generator, (start, end, index) => shadowMaps.visibility(start, end, index));
+const visibility: VirtualPointLightVisibility = (start, end, index) => shadowMaps.visibility(start, end, index);
+const node = new VirtualPointLightsNode(generator, visibility);
 node.intensity.value = 0.5;
 node.update();
 const material = new MeshStandardNodeMaterial();

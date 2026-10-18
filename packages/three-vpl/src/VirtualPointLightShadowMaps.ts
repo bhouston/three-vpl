@@ -1,3 +1,7 @@
+import type { VirtualPointLightGenerator } from './VirtualPointLightGenerator.js';
+import type { Material, Mesh, Scene, Texture } from 'three';
+import type { Node, WebGPURenderer } from 'three/webgpu';
+type CaptureMaterial = Material & { map?: Texture | null; alphaMap?: Texture | null };
 import {
   Color,
   DoubleSide,
@@ -34,6 +38,22 @@ import {
  *
  */
 class VirtualPointLightShadowMaps {
+  /** Maximum number of emitters in the atlas. */
+  readonly capacity: number;
+  /** Pixels per cube face; pass a new resolution to update to resize safely. */
+  resolution;
+  columns: number;
+  rows: number;
+  /** Maximum capture distance. */
+  far: number;
+  /** Packed radial-distance texture atlas. */
+  target;
+  private origin;
+  private material;
+  private cutoutMaterials = new Map<Material, { key: unknown[]; material: MeshBasicNodeMaterial }>();
+  private camera;
+  private directions;
+  private up;
   /**
    * Constructs new VPL shadow maps.
    *
@@ -41,7 +61,7 @@ class VirtualPointLightShadowMaps {
    * @param {number} [resolution=32] - Pixels per cube face.
    * @param {number} [far=40] - Maximum shadow distance in world units.
    */
-  constructor(capacity, resolution = 32, far = 40) {
+  constructor(capacity: number, resolution = 32, far = 40) {
     this.resolution = uniform(resolution, 'int');
     this.capacity = capacity;
     this.columns = Math.ceil(Math.sqrt(capacity * 6));
@@ -61,7 +81,6 @@ class VirtualPointLightShadowMaps {
     this.material.blending = NoBlending;
     this.material.toneMapped = false;
     this.material.fragmentNode = vec4(positionWorld.sub(this.origin).length().div(far), 0, 0, 1);
-    this.cutoutMaterials = new Map();
     this.camera = new PerspectiveCamera(90, 1, 0.001, far);
     this.directions = [
       new Vector3(1, 0, 0),
@@ -90,7 +109,7 @@ class VirtualPointLightShadowMaps {
    * @param {Node<vec3>} [receiverNormal=normalWorld] - The receiver normal.
    * @return {Node<bool>} The visibility node.
    */
-  visibility(start, end, index, receiverNormal = normalWorld) {
+  visibility(start: Node<'vec3'>, end: Node<'vec3'>, index: Node<'int'>, receiverNormal: Node<'vec3'> = normalWorld) {
     return Fn(() => {
       const d = start.sub(end);
       const a = d.abs();
@@ -123,7 +142,13 @@ class VirtualPointLightShadowMaps {
           });
         });
       const tile = index.mul(6).add(face);
-      const pixel = ivec2(uv.mul(0.5).add(0.5).mul(this.resolution)).clamp(0, this.resolution.sub(1));
+      // Three r186 supports integer clamp at runtime, but @types/three only declares float overloads.
+      const coordinates = ivec2(uv.mul(0.5).add(0.5).mul(this.resolution));
+      const pixel = (
+        coordinates as typeof coordinates & {
+          clamp(low: number, high: Node<'int'>): Node<'ivec2'>;
+        }
+      ).clamp(0, this.resolution.sub(1));
       const offset = ivec2(tile.mod(this.columns), tile.div(this.columns)).mul(this.resolution);
       const depth = textureLoad(this.target.texture, offset.add(pixel)).r.mul(this.far);
       // compare at the sampled texel's ray to avoid self-shadowing on sloped receivers
@@ -164,7 +189,7 @@ class VirtualPointLightShadowMaps {
    * @param {Material} source - The original material.
    * @return {NodeMaterial} The capture material.
    */
-  getCaptureMaterial(source) {
+  getCaptureMaterial(source: CaptureMaterial) {
     if (!source.alphaTest) return this.material;
     const key = [source.map, source.alphaMap, source.alphaTest, source.opacity];
     const cached = this.cutoutMaterials.get(source);
@@ -172,7 +197,7 @@ class VirtualPointLightShadowMaps {
     if (cached) cached.material.dispose();
     const material = this.material.clone();
     material.fragmentNode = Fn(() => {
-      let alpha = float(source.opacity);
+      let alpha: Node<'float'> = float(source.opacity);
       if (source.map) alpha = alpha.mul(texture(source.map).a);
       if (source.alphaMap) alpha = alpha.mul(texture(source.alphaMap).g);
       alpha.lessThanEqual(source.alphaTest).discard();
@@ -191,7 +216,13 @@ class VirtualPointLightShadowMaps {
    * @param {number} bias - Offset of each capture origin along the VPL normal.
    * @param {number} [resolution] - Pixels per cube face.
    */
-  update(renderer, scene, generator, bias, resolution = this.resolution.value) {
+  update(
+    renderer: WebGPURenderer,
+    scene: Scene,
+    generator: VirtualPointLightGenerator,
+    bias: number,
+    resolution = this.resolution.value,
+  ) {
     const tiles = Math.max(1, generator.count * 6);
     // fixed width keeps the tile division in the shader constant
     const columns = this.columns;
@@ -210,9 +241,12 @@ class VirtualPointLightShadowMaps {
       background: scene.background,
     };
     const lookAt = new Vector3();
-    const surfaces = [];
+    const surfaces: { object: Mesh; material: Material | Material[] }[] = [];
     scene.traverseVisible((object) => {
-      if (object.isMesh) surfaces.push({ object, material: object.material });
+      if ((object as Mesh).isMesh) {
+        const mesh = object as Mesh;
+        surfaces.push({ object: mesh, material: mesh.material });
+      }
     });
 
     try {

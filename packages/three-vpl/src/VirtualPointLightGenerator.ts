@@ -1,3 +1,11 @@
+import type { Box3, DirectionalLight, PointLight, Scene, Texture, Wrapping } from 'three';
+import type {
+  SurfaceMesh,
+  SurfaceMaterial,
+  TextureHit,
+  TextureSamplerLike,
+  EmissiveSource,
+} from './VirtualPointLightSources.js';
 import {
   Color,
   FloatType,
@@ -14,11 +22,69 @@ import {
 
 import { emissiveSources, sampleEmission, luminance } from './VirtualPointLightSources.js';
 
+/** Controls reproducible CPU light-path sampling. */
+export type VirtualPointLightOptions = {
+  /** Maximum active emitters, bounded by generator capacity. Defaults to 256. */
+  count?: number;
+  /** Deterministic random seed. Defaults to 1. */
+  seed?: number;
+  /** World sampling bounds; required for directional lights. */
+  bounds?: Box3 | null;
+  /** Maximum diffuse reflections, 1–16. Defaults to 1. */
+  bounces?: number;
+  /** Trace additional candidates and compress to count emitters, 1–16. Defaults to 1. */
+  candidateMultiplier?: number;
+  /** Allocate rays by source power and luminance. Defaults to true. */
+  importanceSampling?: boolean;
+  /** Include visible emissive triangles. Defaults to true. */
+  emissive?: boolean;
+  /** Stratify initial directions and emitter areas. Defaults to true. */
+  stratified?: boolean;
+  /** Spatially order candidates before importance resampling. Defaults to true. */
+  spatialResampling?: boolean;
+};
+
+type Candidate = { position: Vector3; normal: Vector3; flux: Vector3; order?: number };
+type LightSource = {
+  light: PointLight | DirectionalLight;
+  origin: Vector3;
+  power: number;
+  emission: Color;
+  weight: number;
+  mesh?: never;
+  direction?: never;
+};
+type DirectionalSource = Omit<LightSource, 'direction'> & {
+  direction: Vector3;
+  u: Vector3;
+  v: Vector3;
+  minU: number;
+  maxU: number;
+  minV: number;
+  maxV: number;
+  minDepth: number;
+};
+type Source = LightSource | DirectionalSource | EmissiveSource;
 /** Deterministic diffuse light paths with source-power sampling and optional flux-weighted compression.
  * Static visible meshes, point/directional lights and emissive triangles; no BVH dependency.
  * Instancing, skinning, normal maps and texture mip selection are not evaluated.
  */
 class VirtualPointLightGenerator {
+  /** Maximum GPU emitter count. */
+  readonly capacity: number;
+  private readonly _textureSampler: TextureSampler;
+  /** Number of active entries in positions, normals, and flux. */
+  count: number;
+  /** Number of CPU rays traced by the last generation. */
+  rayCount: number;
+  /** Number of sampled emitters before compression. */
+  candidateCount: number;
+  /** World positions; only the first count entries are active. */
+  readonly positions: Vector3[];
+  /** Unit world normals pointing into the reflected hemisphere. */
+  readonly normals: Vector3[];
+  /** Reflected RGB flux in linear color space. */
+  readonly flux: Vector3[];
   /** @param {number} [capacity=1024] Maximum GPU emitter count. */
   constructor(capacity = 1024) {
     if (!Number.isInteger(capacity) || capacity < 1) throw new RangeError('Capacity must be a positive integer.');
@@ -50,8 +116,8 @@ class VirtualPointLightGenerator {
    * @return {VirtualPointLightGenerator}
    */
   generate(
-    scene,
-    lights,
+    scene: Scene,
+    lights: Array<PointLight | DirectionalLight>,
     {
       count = 256,
       seed = 1,
@@ -62,29 +128,35 @@ class VirtualPointLightGenerator {
       emissive = true,
       stratified = true,
       spatialResampling = true,
-    } = {},
-  ) {
+    }: VirtualPointLightOptions = {},
+  ): this {
     if (!Number.isInteger(bounces) || bounces < 1 || bounces > 16)
       throw new RangeError('Bounces must be an integer from 1 to 16.');
     if (!Number.isInteger(candidateMultiplier) || candidateMultiplier < 1 || candidateMultiplier > 16)
       throw new RangeError('Candidate multiplier must be an integer from 1 to 16.');
     if (!Number.isInteger(count) || count < Math.max(1, lights.length) * bounces || count > this.capacity)
       throw new RangeError('Ray budget must cover every light and bounce depth, and fit the capacity.');
-    if (lights.some((light) => !light.isDirectionalLight && (!light.isPointLight || light.decay !== 2)))
+    if (lights.some((light) => !('isDirectionalLight' in light) && (!('isPointLight' in light) || light.decay !== 2)))
       throw new Error('Virtual point lights require directional lights or inverse-square point lights.');
-    if (lights.some((light) => light.isDirectionalLight) && (bounds === null || bounds.isEmpty()))
+    if (lights.some((light) => 'isDirectionalLight' in light) && (bounds === null || bounds.isEmpty()))
       throw new Error('Directional VPL sampling requires non-empty world-space bounds.');
     scene.updateMatrixWorld(true);
-    const surfaces = [];
+    const surfaces: SurfaceMesh[] = [];
     scene.traverseVisible((object) => {
-      if (object.isMesh) surfaces.push(object);
+      if ('isMesh' in object && object.isMesh) surfaces.push(object as SurfaceMesh);
     });
-    const sources = [];
+    const sources: Source[] = [];
     const corner = new Vector3();
     for (const light of lights) {
       const origin = light.getWorldPosition(new Vector3());
-      const source = { light, origin, power: 4 * Math.PI * light.intensity, emission: light.color };
-      if (light.isDirectionalLight) {
+      let source: LightSource | DirectionalSource = {
+        light,
+        origin,
+        power: 4 * Math.PI * light.intensity,
+        emission: light.color,
+        weight: 0,
+      };
+      if ('isDirectionalLight' in light && bounds !== null) {
         const direction = light.target.getWorldPosition(new Vector3()).sub(origin).normalize();
         if (direction.lengthSq() === 0) throw new Error('Directional light position and target must differ.');
         const u = new Vector3(Math.abs(direction.y) > 0.99 ? 1 : 0, Math.abs(direction.y) > 0.99 ? 0 : 1, 0)
@@ -109,7 +181,7 @@ class VirtualPointLightGenerator {
           minDepth = Math.min(minDepth, corner.dot(direction));
         }
 
-        Object.assign(source, { direction, u, v, minU, maxU, minV, maxV, minDepth });
+        source = { ...source, direction, u, v, minU, maxU, minV, maxV, minDepth };
         source.power = light.intensity * (maxU - minU) * (maxV - minV);
       }
 
@@ -142,12 +214,12 @@ class VirtualPointLightGenerator {
     });
     const priority = allocations.slice().sort((a, b) => b.remainder - a.remainder);
     for (let i = 0; i < paths - allocated; i++) priority[i].samples++;
-    const candidates = [];
-    const record = (position, normal, flux) => {
+    const candidates: Candidate[] = [];
+    const record = (position: Vector3, normal: Vector3, flux: Vector3) => {
       candidates.push({ position: position.clone(), normal: normal.clone(), flux: flux.clone() });
     };
 
-    const raycaster = new Raycaster();
+    const raycaster: Raycaster & { firstHitOnly?: boolean } = new Raycaster();
     // Native Mesh.raycast ignores this hint. Preserve the existing opaque closest-hit
     // optimization for callers that already installed an accelerated mesh raycaster.
     // Alpha cutouts require considering later intersections.
@@ -163,7 +235,7 @@ class VirtualPointLightGenerator {
       direction = new Vector3(),
       u = new Vector3(),
       v = new Vector3();
-    const cosineDirection = (normal) => {
+    const cosineDirection = (normal: Vector3) => {
       const radius = Math.sqrt(random()),
         phi = 2 * Math.PI * random();
       u.set(Math.abs(normal.y) > 0.99 ? 1 : 0, Math.abs(normal.y) > 0.99 ? 0 : 1, 0)
@@ -221,11 +293,12 @@ class VirtualPointLightGenerator {
         for (let depth = 0; depth < bounces; depth++) {
           raycaster.set(origin, direction);
           this.rayCount++;
-          const hits = raycaster.intersectObjects(surfaces, false);
-          let hit, material;
+          const hits = raycaster.intersectObjects<SurfaceMesh>(surfaces, false);
+          let hit: (typeof hits)[number] | undefined;
+          let material: SurfaceMaterial | undefined;
           for (const candidate of hits) {
             const candidateMaterial = Array.isArray(candidate.object.material)
-              ? candidate.object.material[candidate.face.materialIndex]
+              ? candidate.object.material[candidate.face!.materialIndex]
               : candidate.object.material;
             let alpha = candidateMaterial.opacity;
             if (candidateMaterial.alphaTest > 0) {
@@ -240,7 +313,7 @@ class VirtualPointLightGenerator {
             break;
           }
 
-          if (!hit) break;
+          if (!hit || !material) break;
           albedo.copy(material.color || new Color(0xffffff)).multiply(throughput);
           if (material.map) {
             const texel = this._textureSampler.sample(material.map, hit);
@@ -249,11 +322,11 @@ class VirtualPointLightGenerator {
             albedo.b *= texel.z;
           }
 
-          if (depth === 0 && source.light?.isPointLight && source.light.distance > 0)
+          if (depth === 0 && source.light && 'isPointLight' in source.light && source.light.distance > 0)
             albedo.multiplyScalar(Math.pow(Math.max(0, 1 - Math.pow(hit.distance / source.light.distance, 4)), 2));
           albedo.multiplyScalar(1 - (material.metalness || 0));
           normalMatrix.getNormalMatrix(hit.object.matrixWorld);
-          const normal = hit.face.normal.clone().applyNormalMatrix(normalMatrix);
+          const normal = hit.face!.normal.clone().applyNormalMatrix(normalMatrix);
           if (normal.dot(direction) > 0) normal.negate();
           record(hit.point, normal, new Vector3(albedo.r, albedo.g, albedo.b).multiplyScalar(power));
           throughput.copy(albedo);
@@ -279,7 +352,7 @@ class VirtualPointLightGenerator {
         }
 
         const size = upper.sub(lower).max(new Vector3(1e-6, 1e-6, 1e-6));
-        const spread = (value) => {
+        const spread = (value: number) => {
           let bits = Math.min(1023, Math.max(0, Math.floor(value * 1024)));
           bits = (bits | (bits << 16)) & 0x030000ff;
           bits = (bits | (bits << 8)) & 0x0300f00f;
@@ -292,7 +365,7 @@ class VirtualPointLightGenerator {
           candidate.order = spread(p.x) + 2 * spread(p.y) + 4 * spread(p.z);
         }
 
-        candidates.sort((a, b) => a.order - b.order);
+        candidates.sort((a, b) => a.order! - b.order!);
       }
 
       // Stratified flux importance resampling: E[sum selected flux] = sum candidate flux.
@@ -317,28 +390,32 @@ class VirtualPointLightGenerator {
     return this;
   }
 
-  store(index, candidate, weight) {
+  private store(index: number, candidate: Candidate, weight: number) {
     this.positions[index].copy(candidate.position);
     this.normals[index].copy(candidate.normal);
     this.flux[index].copy(candidate.flux).multiplyScalar(weight);
   }
 }
 
-class TextureSampler {
+type CachedImage = { data: ArrayLike<number>; width: number; height: number; scale: number; version: number };
+class TextureSampler implements TextureSamplerLike {
+  readonly images: WeakMap<Texture, CachedImage>;
+  readonly uv: Vector2;
+  readonly value: Vector4;
   constructor() {
     this.images = new WeakMap();
     this.uv = new Vector2();
     this.value = new Vector4();
   }
 
-  sample(texture, hit) {
+  sample(texture: Texture, hit: TextureHit) {
     if (texture.matrixAutoUpdate) texture.updateMatrix();
-    texture.transformUv(this.uv.copy(texture.channel === 1 ? hit.uv1 : hit.uv));
+    texture.transformUv(this.uv.copy(texture.channel === 1 ? hit.uv1! : hit.uv!));
 
     let image = this.images.get(texture);
     if (!image || image.version !== texture.source.version) {
-      const source = texture.image;
-      let data;
+      const source = texture.image as { data?: ArrayLike<number>; width: number; height: number } & CanvasImageSource;
+      let data: ArrayLike<number>;
       let scale = 1 / 255;
 
       if (source.data) {
@@ -349,6 +426,7 @@ class TextureSampler {
         canvas.width = source.width;
         canvas.height = source.height;
         const context = canvas.getContext('2d', { willReadFrequently: true });
+        if (!context) throw new Error('CPU texture sampling requires a 2D canvas context.');
         context.drawImage(source, 0, 0);
         data = context.getImageData(0, 0, canvas.width, canvas.height).data;
       }
@@ -357,7 +435,7 @@ class TextureSampler {
       this.images.set(texture, image);
     }
 
-    const wrap = (index, size, mode) => {
+    const wrap = (index: number, size: number, mode: Wrapping) => {
       if (mode === RepeatWrapping) return ((index % size) + size) % size;
       if (mode === MirroredRepeatWrapping) {
         const mirrored = ((index % (size * 2)) + size * 2) % (size * 2);

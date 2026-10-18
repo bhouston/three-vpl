@@ -13,6 +13,20 @@ npm install three-vpl three@0.186.0
 
 The first npm release is pending maintainer publishing setup. Until then, use a checkout of this monorepo and its workspace package.
 
+## TypeScript
+
+The library is written in strict TypeScript and ships compiled ESM JavaScript plus generated declarations. Install `@types/three@~0.186.0` for TypeScript projects. Options and visibility callback types are exported from `three-vpl`:
+
+```ts
+import type { VirtualPointLightOptions, VirtualPointLightVisibility } from 'three-vpl';
+
+const options: VirtualPointLightOptions = { count: 128, bounces: 2, seed: 1 };
+```
+
+The r186 typings for `lights()` accept only `Light[]`, although Three.js also accepts lighting nodes at runtime. TypeScript callers should use `indirect as unknown as Light` with `import type { Light } from 'three'` when adding the indirect node.
+
+For local development, `pnpm build` compiles the library and builds this website; `pnpm dev` builds the library before starting Docusaurus. After editing library source, rebuild it to refresh the demo. API documentation is generated directly from the TypeScript source.
+
 ## Add indirect illumination
 
 ```js
