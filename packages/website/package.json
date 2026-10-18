@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "pnpm api && docusaurus start",
+    "dev": "pnpm --filter three-vpl build && pnpm api && docusaurus start",
     "api": "typedoc --options typedoc.config.mjs",
     "build": "pnpm api && docusaurus build",
     "serve": "docusaurus serve",
