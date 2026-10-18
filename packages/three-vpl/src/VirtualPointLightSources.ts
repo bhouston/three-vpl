@@ -1,11 +1,36 @@
 import { BackSide, Color, DoubleSide, Vector2, Vector3 } from 'three';
 
-const luminance = (color) => 0.2126 * color.r + 0.7152 * color.g + 0.0722 * color.b;
+import type { Material, Mesh, Texture, Vector4 } from 'three';
+export type SurfaceMaterial = Material & {
+  color?: Color;
+  emissive?: Color;
+  emissiveIntensity?: number;
+  map?: Texture | null;
+  alphaMap?: Texture | null;
+  emissiveMap?: Texture | null;
+  metalness?: number;
+};
+export type SurfaceMesh = Mesh<import('three').BufferGeometry, SurfaceMaterial | SurfaceMaterial[]>;
+export type TextureHit = { uv?: Vector2; uv1?: Vector2 };
+export type TextureSamplerLike = { sample(texture: Texture, hit: TextureHit): Vector4 };
+type Triangle = { vertices: number[]; a: Vector3; b: Vector3; c: Vector3; normal: Vector3; cumulativeArea: number };
+export type EmissiveSource = {
+  mesh: SurfaceMesh;
+  material: SurfaceMaterial;
+  emission: Color;
+  triangles: Triangle[];
+  area: number;
+  power: number;
+  weight: number;
+  light?: never;
+  direction?: never;
+};
+const luminance = (color: Color) => 0.2126 * color.r + 0.7152 * color.g + 0.0722 * color.b;
 
 // Group emissive triangles by mesh/material. Area sampling includes world transforms,
 // indexed/non-indexed geometry, material groups, UVs, maps and alpha cutouts.
-function emissiveSources(surfaces) {
-  const sources = [];
+function emissiveSources(surfaces: SurfaceMesh[]) {
+  const sources: EmissiveSource[] = [];
   const a = new Vector3(),
     b = new Vector3(),
     c = new Vector3();
@@ -18,15 +43,15 @@ function emissiveSources(surfaces) {
     const groups = Array.isArray(mesh.material)
       ? geometry.groups
       : [{ start: 0, count: index ? index.count : position.count, materialIndex: 0 }];
-    const grouped = new Map();
+    const grouped = new Map<SurfaceMaterial, EmissiveSource>();
     for (const group of groups) {
-      const material = materials[group.materialIndex];
+      const material = materials[group.materialIndex ?? 0];
       if (!material || !material.emissive || material.emissiveIntensity === 0 || luminance(material.emissive) <= 0)
         continue;
       let source = grouped.get(material);
       if (!source) {
         const emission = new Color().copy(material.emissive).multiplyScalar(material.emissiveIntensity ?? 1);
-        source = { mesh, material, emission, triangles: [], area: 0 };
+        source = { mesh, material, emission, triangles: [], area: 0, power: 0, weight: 0 };
         grouped.set(material, source);
       }
 
@@ -68,7 +93,7 @@ function emissiveSources(surfaces) {
   return sources;
 }
 
-function sampleEmission(source, select, random, sampler) {
+function sampleEmission(source: EmissiveSource, select: number, random: () => number, sampler: TextureSamplerLike) {
   let low = 0,
     high = source.triangles.length - 1;
   const area = select * source.area;
@@ -89,13 +114,16 @@ function sampleEmission(source, select, random, sampler) {
     .addScaledVector(triangle.c, weights[2]);
   const normal = triangle.normal.clone();
   if (source.material.side === DoubleSide && random() < 0.5) normal.negate();
-  const hit = {};
-  for (const name of ['uv', 'uv1']) {
+  const hit: TextureHit = {};
+  for (const name of ['uv', 'uv1'] as const) {
     const attribute = source.mesh.geometry.attributes[name];
     if (!attribute) continue;
     hit[name] = new Vector2();
     for (let i = 0; i < 3; i++)
-      hit[name].addScaledVector(new Vector2().fromBufferAttribute(attribute, triangle.vertices[i]), weights[i]);
+      hit[name].addScaledVector(
+        new Vector2(attribute.getX(triangle.vertices[i]), attribute.getY(triangle.vertices[i])),
+        weights[i],
+      );
   }
 
   const emission = source.emission.clone();
