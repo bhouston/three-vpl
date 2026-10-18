@@ -70,13 +70,20 @@ type Source = LightSource | DirectionalSource | EmissiveSource;
  * Instancing, skinning, normal maps and texture mip selection are not evaluated.
  */
 class VirtualPointLightGenerator {
+  /** Maximum GPU emitter count. */
   readonly capacity: number;
   private readonly _textureSampler: TextureSampler;
+  /** Number of active entries in positions, normals, and flux. */
   count: number;
+  /** Number of CPU rays traced by the last generation. */
   rayCount: number;
+  /** Number of sampled emitters before compression. */
   candidateCount: number;
+  /** World positions; only the first count entries are active. */
   readonly positions: Vector3[];
+  /** Unit world normals pointing into the reflected hemisphere. */
   readonly normals: Vector3[];
+  /** Reflected RGB flux in linear color space. */
   readonly flux: Vector3[];
   /** @param {number} [capacity=1024] Maximum GPU emitter count. */
   constructor(capacity = 1024) {

@@ -19,7 +19,7 @@ for (const entry of [manifest.main, manifest.types, 'LICENSE', 'README.md']) {
   assert.ok(existsSync(resolve(cwd, path)), `Missing package file: ${path}`);
 }
 assert.ok(!files.some(({ path }) => /^(test|node_modules|website)\//.test(path)), 'Tarball includes development files');
-const api = await import('../packages/three-vpl/src/index.js');
+const api = await import('../packages/three-vpl/dist/index.js');
 for (const name of [
   'VirtualPointLightGenerator',
   'VirtualPointLightsNode',
