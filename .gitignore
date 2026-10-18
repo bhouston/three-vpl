@@ -1,0 +1,13 @@
+node_modules/
+dist/
+build/
+.docusaurus/
+coverage/
+*.tsbuildinfo
+.env
+.env.*
+release-artifacts/
+packages/website/docs/api/
+packages/three-vpl/CHANGELOG.md
+playwright-report/
+test-results/

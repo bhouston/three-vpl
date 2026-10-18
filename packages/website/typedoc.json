@@ -1,0 +1,19 @@
+{
+  "entryPoints": ["../three-vpl/src/index.d.ts"],
+  "entryPointStrategy": "resolve",
+  "plugin": ["typedoc-plugin-markdown"],
+  "out": "docs/api",
+  "readme": "none",
+  "entryFileName": "index.md",
+  "hidePageHeader": true,
+  "hideBreadcrumbs": true,
+  "parametersFormat": "table",
+  "excludePrivate": true,
+  "excludeInternal": true,
+  "tsconfig": "../three-vpl/tsconfig.json",
+  "excludeExternals": true,
+  "externalPattern": ["**/node_modules/**"],
+  "disableGit": true,
+  "sourceLinkTemplate": "https://github.com/bhouston/three-vpl/blob/{gitRevision}/{path}#L{line}",
+  "basePath": "../.."
+}

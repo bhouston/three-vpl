@@ -1,0 +1,45 @@
+{
+  "name": "website",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm api && docusaurus start",
+    "api": "typedoc --options typedoc.config.mjs",
+    "build": "pnpm api && docusaurus build",
+    "serve": "docusaurus serve",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@docusaurus/core": "^3.10.2",
+    "@docusaurus/module-type-aliases": "^3.10.2",
+    "@docusaurus/preset-classic": "^3.10.2",
+    "@docusaurus/theme-classic": "^3.10.2",
+    "@docusaurus/tsconfig": "^3.10.2",
+    "@docusaurus/types": "^3.10.2",
+    "@mdx-js/react": "^3.1.1",
+    "@types/react": "^19.2.0",
+    "@types/three": "~0.186.0",
+    "clsx": "^2.1.1",
+    "prism-react-renderer": "^2.4.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "three": "0.186.0",
+    "three-vpl": "workspace:*",
+    "typedoc": "^0.28.14",
+    "typedoc-plugin-markdown": "^4.9.0",
+    "typescript": "^5.9.3"
+  },
+  "browserslist": {
+    "production": [
+      "Chrome >= 113",
+      "Edge >= 113",
+      "Firefox >= 141",
+      "Safari >= 26"
+    ],
+    "development": [
+      "last 1 Chrome version",
+      "last 1 Edge version",
+      "last 1 Firefox version"
+    ]
+  }
+}

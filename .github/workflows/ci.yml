@@ -1,0 +1,45 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm tsc
+      - run: pnpm lint
+      - run: pnpm format:check
+      - run: pnpm test
+      - run: pnpm package:check
+      - run: pnpm audit --prod --audit-level high
+      - name: Audit build and development tooling (advisory)
+        continue-on-error: true
+        run: pnpm audit --audit-level high
+      - uses: actions/upload-artifact@v4
+        with:
+          name: website
+          path: packages/website/build
+      # Hosted Linux runners have no physical GPU. Rendering is verified on
+      # hardware separately; never enable software GPU fallbacks here.
